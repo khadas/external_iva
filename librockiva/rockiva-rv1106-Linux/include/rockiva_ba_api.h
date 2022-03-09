@@ -94,7 +94,7 @@ typedef struct {
 typedef struct {
     RockIvaBaTaskRule baRules;                    /* 行为分析规则参数配置初始化 */
     RockIvaBaAiConfig aiConfig;                   /* 算法配置 */
-} RockIvaBaTaskInitParam;
+} RockIvaBaTaskParams;
 
 /* ------------------------------------------------------------------ */
 
@@ -141,8 +141,17 @@ typedef void (*ROCKIVA_BA_ResultCallback)(const RockIvaBaResult* result, const R
  * @param resultCallback [IN] 回调函数
  * @return RockIvaRetCode
  */
-RockIvaRetCode ROCKIVA_BA_Init(RockIvaHandle handle, const RockIvaBaTaskInitParam* initParams,
+RockIvaRetCode ROCKIVA_BA_Init(RockIvaHandle handle, const RockIvaBaTaskParams* params,
                                const ROCKIVA_BA_ResultCallback resultCallback);
+
+/**
+ * @brief 运行时重新配置(重新配置会导致内部的一些记录清空复位，但是模型不会重新初始化)
+ * 
+ * @param handle [IN] handle
+ * @param initParams [IN] 配置参数
+ * @return RockIvaRetCode 
+ */
+RockIvaRetCode ROCKIVA_BA_Reset(RockIvaHandle handle, const RockIvaBaTaskParams* params);
 
 /**
  * @brief 释放

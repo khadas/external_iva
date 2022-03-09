@@ -21,12 +21,12 @@ extern "C"{
 
 /* ------------------------------------------------------------------ */
 
-#define ROCKIVA_FACE_MAX_FACE_NUM     (40)                              /* 最大人脸数目 */
-#define ROCKIVA_AREA_POINT_NUM_MAX      (6)                             /* 最大区域点数 */
-#define ROCKIVA_FACE_FORBIDDEN_AREA   (16)                              /* 最大支持的屏蔽检测区域 */
-#define ROCKIVA_FACE_FEATURE_SIZE_MAX        (1024 * sizeof(float))     /* 特征值空间大小 */
+#define ROCKIVA_FACE_MAX_FACE_NUM            (40)                       /* 最大人脸数目 */
+#define ROCKIVA_AREA_POINT_NUM_MAX           (6)                        /* 最大区域点数 */
+#define ROCKIVA_FACE_FORBIDDEN_AREA          (16)                       /* 最大支持的屏蔽检测区域 */
+#define ROCKIVA_FACE_FEATURE_SIZE_MAX        (4096)                     /* 特征值空间大小 */
 #define ROCKIVA_FACE_MODEL_VERSION           (64)                       /* 模型版本号字符串长度 */
-#define ROCKIVA_FACE_FACEID_INFO             (32)                       /* 人脸入库信息字符串长度(用户填入) */
+#define ROCKIVA_FACE_INFO_SIZE_MAX           (32)                       /* 人脸入库信息字符串长度(用户填入) */
 #define ROCKIVA_FACE_ID_MAX_NUM              (100)                      /* 特征比对结果的TOP数目（最大）*/
 
 /* ---------------------------类型定义----------------------------------- */
@@ -160,6 +160,10 @@ typedef struct {
     uint32_t optBestNum;                          /* ROCKIVA_FACE_OPT_BEST：人脸优选张数 范围：1-3 */
     uint32_t optCycleValue;                       /* ROCKIVA_FACE_OPT_CYCLE：人脸优选周期优选值 ms */
     uint32_t optFastTime;                         /* ROCKIVA_FACE_OPT_FAST：人脸优选快速模式下的时间设置 */
+    uint8_t captureImageFlag;                     /* 在RockIvaFaceCapResult中返回人脸小图，开关[0关 1开] */
+    RockIvaRectExpandRatio captureExpand;         /* 抓拍时扩展人脸框上下左右的比例大小配置 */
+    uint32_t alignWidth;                          /* 抓拍图像的对齐宽度 */
+    RockIvaFaceCapacity faceCapacity;             /* 人脸最大检测、抓拍和识别个数配置，目前只实现设置最大抓拍个数，0[不限制] */
 } RockIvaFaceRule;
 
 /* 人脸分析业务初始化参数配置 */
@@ -167,7 +171,7 @@ typedef struct {
     RockIvaFaceWorkMode mode;                     /* 人脸任务模式 */
     RockIvaFaceRule faceCaptureRule;              /* 人脸抓拍规则 */
     RockIvaFaceTaskType faceTaskType;             /* 人脸业务类型：人脸抓拍业务/人脸识别业务 */
-} RockIvaFaceTaskInitParam;
+} RockIvaFaceTaskParams;
 
 /* ------------------------------------------------------------------ */
 
@@ -231,11 +235,12 @@ typedef struct {
     RockIvaFaceCapFrameType faceCapFrameType;                /* 抓拍帧类型 */
     RockIvaFaceInfo faceInfo;                                /* 人脸基本检测信息 */
     RockIvaFaceAnalyseInfo faceAnalyseInfo;                  /* 人脸分析信息 */
+    RockIvaImage captureImage;                               /* 人脸抓拍小图 */
 } RockIvaFaceCapResult;
 
 /* 入库特征对应的详细信息，用户输入 */
 typedef struct {
-    char faceIdInfo[ROCKIVA_FACE_FACEID_INFO];
+    char faceIdInfo[ROCKIVA_FACE_INFO_SIZE_MAX];
 } RockIvaFaceIdInfo;
 
 /* 特征更新类型 */
@@ -245,12 +250,12 @@ typedef enum {
     ROCKIVA_FACE_FEATURE_UPDATE = 2,          /* 更新特征 */
     ROCKIVA_FACE_FEATURE_RETRIEVAL = 3,       /* 查找标签 */
     ROCKIVA_FACE_FEATURE_CLEAR = 4,           /* 清除库信息 */
-} RockIvaFaceFeatureUpdate;
+} RockIvaFaceLibraryAction;
 
 /* 特征比对返回结果 */
 typedef struct {
-    char faceIdInfo[ROCKIVA_FACE_FACEID_INFO];     /* 人脸详细信息 */
-    float score;                                   /* 比对分数 */
+    char faceIdInfo[ROCKIVA_FACE_INFO_SIZE_MAX];     /* 人脸详细信息 */
+    float score;                                       /* 比对分数 */
 } RockIvaFaceSearchResult;
 
 /* 特征比对返回结果列表 */
@@ -295,8 +300,17 @@ typedef struct {
  * @return RockIvaRetCode 
  */
 RockIvaRetCode ROCKIVA_FACE_Init(RockIvaHandle handle,
-                                const RockIvaFaceTaskInitParam *initParams,
+                                const RockIvaFaceTaskParams *initParams,
                                 const RockIvaFaceCallback callback);
+
+/**
+ * @brief 运行时重新配置(重新配置会导致内部的一些记录清空复位，但是模型不会重新初始化)
+ * 
+ * @param handle [IN] handle
+ * @param initParams [IN] 配置参数
+ * @return RockIvaRetCode 
+ */
+RockIvaRetCode ROCKIVA_FACE_Reset(RockIvaHandle handle, const RockIvaFaceTaskParams* params);
 
 /**
  * @brief 销毁
@@ -311,49 +325,39 @@ RockIvaRetCode ROCKIVA_FACE_Release(RockIvaHandle handle);
  * 
  * @param feature1 [IN] 人脸特征1
  * @param feature2 [IN] 人脸特征2
- * @param featureLen [IN] 人脸特征长度(以字节计，如：512维float型特征，实际传入值应为512*4)
- * @param outScore [OUT] 人脸1:1比对相似度(范围0.00-1.00)
- * @return RockIvaRetCode 
+ * @param score [OUT] 人脸1:1比对相似度(范围0-1.0)
+ * @return RockIvaRetCode
  */
-RockIvaRetCode ROCKIVA_FACE_FeatureCompare(const void* feature1,
-                                    const void* feature2,
-                                    uint32_t featureLen,
-                                    float* outScore);
+RockIvaRetCode ROCKIVA_FACE_FeatureCompare(const void* feature1, const void* feature2, float* score);
 
 /**
  * @brief 人脸特征布控接口,用于对某个人脸库进行增、删、改
  * 
  * @param libName [IN] 人脸库名称
+ * @param action [IN] 人脸库操作类型
  * @param faceIdInfo [IN] 人脸ID
  * @param faceIdNum [IN] 人脸ID数量
- * @param faceIdData [IN] 人脸特征数据
- * @param updateType [IN] 人脸库操作类型：增、删、改
- * @return RockIvaRetCode 
+ * @param featureData [IN] 人脸特征数据
+ * @return RockIvaRetCode
  */
-RockIvaRetCode ROCKIVA_FACE_FeatureLibraryModify(const char* libName,
-                                    RockIvaFaceIdInfo *faceIdInfo,
-                                    uint32_t faceIdNum,
-                                    const void* faceIdData,
-                                    RockIvaFaceFeatureUpdate updateType);
+RockIvaRetCode ROCKIVA_FACE_FeatureLibraryControl(const char* libName, RockIvaFaceLibraryAction action,
+                                                  RockIvaFaceIdInfo* faceIdInfo, uint32_t faceIdNum,
+                                                  const void* featureData);
 
 /**
  * @brief 人脸特征库检索接口,用于对某个人脸库的特征进行检索
  * 
  * @param libName [IN] 人脸库名称
  * @param featureData [IN] 人脸特征
+ * @param num [IN] 比对特征的个数
  * @param topK [IN] 前K个最相似的特征值
- * @param srcNum [IN] 批量比对的个数
  * @param results [OUT] 比对结果
  * @return RockIvaRetCode 
  */
-RockIvaRetCode ROCKIVA_FACE_SearchFeature(const char *libName,
-                                    const void *featureData,
-                                    uint32_t featureSize,
-                                    uint32_t topK,
-                                    uint32_t srcNum,
-                                    RockIvaFaceSearchResults *results);
+RockIvaRetCode ROCKIVA_FACE_SearchFeature(const char* libName, const void* featureData, uint32_t num, int32_t topK,
+                                          RockIvaFaceSearchResults* results);
 
-#ifdef  __cplusplus
+#ifdef __cplusplus
 }
 #endif /* end of __cplusplus */
 

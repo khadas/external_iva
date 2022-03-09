@@ -160,6 +160,9 @@ typedef struct {
     uint32_t optBestNum;                          /* ROCKIVA_FACE_OPT_BEST：人脸优选张数 范围：1-3 */
     uint32_t optCycleValue;                       /* ROCKIVA_FACE_OPT_CYCLE：人脸优选周期优选值 ms */
     uint32_t optFastTime;                         /* ROCKIVA_FACE_OPT_FAST：人脸优选快速模式下的时间设置 */
+    uint8_t captureImageFlag;                     /* 在RockIvaFaceCapResult中返回人脸小图，开关[0关 1开] */
+    RockIvaRectExpandRatio captureExpand;         /* 抓拍时扩展人脸框上下左右的比例大小配置 */
+    uint32_t alignWidth;                          /* 抓拍图像的对齐宽度 */
 } RockIvaFaceRule;
 
 /* 人脸分析业务初始化参数配置 */
@@ -167,7 +170,7 @@ typedef struct {
     RockIvaFaceWorkMode mode;                     /* 人脸任务模式 */
     RockIvaFaceRule faceCaptureRule;              /* 人脸抓拍规则 */
     RockIvaFaceTaskType faceTaskType;             /* 人脸业务类型：人脸抓拍业务/人脸识别业务 */
-} RockIvaFaceTaskInitParam;
+} RockIvaFaceTaskParams;
 
 /* ------------------------------------------------------------------ */
 
@@ -185,13 +188,28 @@ typedef struct {
     uint32_t attractive;                  /* 颜值 */
 } RockIvaFaceAttribute;
 
+/* 人脸角度信息 */
+typedef struct {
+    int16_t pitch;             /* 俯仰角,表示绕x轴旋转角度 */
+    int16_t yaw;               /* 偏航角,表示绕y轴旋转角度 */
+    int16_t roll;              /* 翻滚角,表示绕z轴旋转角度 */
+} RockIvaAngle;
+
+/* 人脸质量信息 */
+typedef struct {
+    uint16_t score;             /* 人脸质量分数(值范围0~100) */
+    uint16_t clarity;           /* 人脸清晰度(值范围0~100, 100表示最清晰) */
+    RockIvaAngle angle;         /* 人脸角度 */
+} RockIvaFaceQualityInfo;
+
 /* 单个目标人脸检测基本信息 */
 typedef struct {
     uint32_t objId;                                       /* 目标ID[0,2^32) */
     uint32_t frameId;                                     /* 人脸所在帧序号 */
     RockIvaRectangle faceRect;                            /* 人脸区域原始位置 */
-    uint32_t faceScore;                                   /* 人脸质量分数 [1-100] */
+    RockIvaFaceQualityInfo faceQuality;                   /* 人脸质量信息 */
     RockIvaFaceObjectStatus faceObjState;                 /* 人脸目标状态 */
+    RockIvaObjectInfo person;                             /* 关联的人体检测信息 */
 } RockIvaFaceInfo;
 
 /* 单个目标人脸分析信息 */
@@ -216,6 +234,7 @@ typedef struct {
     RockIvaFaceCapFrameType faceCapFrameType;                /* 抓拍帧类型 */
     RockIvaFaceInfo faceInfo;                                /* 人脸基本检测信息 */
     RockIvaFaceAnalyseInfo faceAnalyseInfo;                  /* 人脸分析信息 */
+    RockIvaImage captureImage;                               /* 人脸抓拍小图 */
 } RockIvaFaceCapResult;
 
 /* 入库特征对应的详细信息，用户输入 */
@@ -280,8 +299,17 @@ typedef struct {
  * @return RockIvaRetCode 
  */
 RockIvaRetCode ROCKIVA_FACE_Init(RockIvaHandle handle,
-                                const RockIvaFaceTaskInitParam *initParams,
+                                const RockIvaFaceTaskParams *initParams,
                                 const RockIvaFaceCallback callback);
+
+/**
+ * @brief 运行时重新配置(重新配置会导致内部的一些记录清空复位，但是模型不会重新初始化)
+ * 
+ * @param handle [IN] handle
+ * @param initParams [IN] 配置参数
+ * @return RockIvaRetCode 
+ */
+RockIvaRetCode ROCKIVA_FACE_Reset(RockIvaHandle handle, const RockIvaFaceTaskParams* params);
 
 /**
  * @brief 销毁

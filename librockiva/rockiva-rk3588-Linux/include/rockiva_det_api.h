@@ -27,7 +27,7 @@ extern "C" {
 typedef struct {
     RockIvaAreas detAreas;          /* 配置有效检测区域 */
     uint32_t detObjectType;         /* 配置要检测的目标,例如检测人\机动车\非机动车: ROCKIVA_OBJECT_TYPE_PERSON|ROCKIVA_OBJECT_TYPE_VEHICLE|ROCKIVA_OBJECT_TYPE_NON_VEHICLE */
-} RockIvaDetectTaskInitParam;
+} RockIvaDetectTaskParams;
 
 /* ---------------------------------------------------------------- */
 
@@ -49,8 +49,17 @@ typedef void (*ROCKIVA_DetectResultCallback)(const RockIvaDetectResult* result, 
  * @param resultCallback [IN] 回调函数
  * @return RockIvaRetCode
  */
-RockIvaRetCode ROCKIVA_DETECT_Init(RockIvaHandle handle, const RockIvaDetectTaskInitParam* initParams,
+RockIvaRetCode ROCKIVA_DETECT_Init(RockIvaHandle handle, const RockIvaDetectTaskParams* initParams,
                                const ROCKIVA_DetectResultCallback resultCallback);
+
+/**
+ * @brief 运行时重新配置(重新配置会导致内部的一些记录清空复位，但是模型不会重新初始化)
+ * 
+ * @param handle [IN] handle
+ * @param initParams [IN] 配置参数
+ * @return RockIvaRetCode 
+ */
+RockIvaRetCode ROCKIVA_DETECT_Reset(RockIvaHandle handle, const RockIvaDetectTaskParams* params);
 
 /**
  * @brief 释放

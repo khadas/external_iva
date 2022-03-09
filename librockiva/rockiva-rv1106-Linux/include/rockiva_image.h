@@ -28,7 +28,7 @@ extern "C"{
  * @param cropImg [OUT] 裁剪图像
  * @return RockIvaRetCode 执行结果
  */
-RockIvaRetCode ROCKIVA_IMAGE_Crop(const RockIvaImage *srcImg, const RockIvaRectangle *rect, int alignSize, RockIvaImage *cropImg);
+RockIvaRetCode ROCKIVA_IMAGE_Crop(const RockIvaImage *srcImg, const RockIvaRectangle *rect, int alignSize, RockIvaImage *cropImg, RockIvaRectExpandRatio *expand);
 
 /**
  * @brief 图像拷贝(目前只能拷贝虚拟地址内存的图像数据,目标图像用完后需要释放)

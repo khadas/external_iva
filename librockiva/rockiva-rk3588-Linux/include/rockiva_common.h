@@ -109,6 +109,8 @@ typedef enum {
     ROCKIVA_OBJECT_TYPE_NON_VEHICLE = 0x4, /* 非机动车 */
     ROCKIVA_OBJECT_TYPE_FACE = 0x8,        /* 人脸 */
     ROCKIVA_OBJECT_TYPE_HEAD = 0x10,       /* 人头 */
+    ROCKIVA_OBJECT_TYPE_CAT = 0x20,       /* 猫 */
+    ROCKIVA_OBJECT_TYPE_DOG = 0x40,       /* 狗 */
 } RockIvaObjectType;
 
 /* 工作模式 */
@@ -175,6 +177,14 @@ typedef struct {
     uint16_t height; /* 高度 */
 } RockIvaSize;
 
+/* 检测框向四周扩展的比例大小配置 */
+typedef struct {
+    float up;        /* 检测框向上按框高扩展的比例大小 */
+    float down;      /* 检测框向下按框高扩展的比例大小 */
+    float left;      /* 检测框向左按框宽扩展的比例大小 */
+    float right;     /* 检测框向右按框宽扩展的比例大小 */
+} RockIvaRectExpandRatio;
+
 /* 图像信息 */
 typedef struct {
     uint16_t width;                      /* 图像宽度 */
@@ -194,6 +204,7 @@ typedef struct {
     int32_t dataFd;        /* 图像数据DMA buffer fd */
 } RockIvaImage;
 
+/* 单个目标检测结果信息 */
 typedef struct {
     uint32_t objId;            /* 目标ID[0,2^32) */
     uint32_t frameId;          /* 所在帧序号 */
