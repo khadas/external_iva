@@ -342,7 +342,7 @@ RockIvaRetCode ROCKIVA_FACE_FeatureCompare(const void* feature1, const void* fea
  */
 RockIvaRetCode ROCKIVA_FACE_FeatureLibraryControl(const char* libName, RockIvaFaceLibraryAction action,
                                                   RockIvaFaceIdInfo* faceIdInfo, uint32_t faceIdNum,
-                                                  const void* featureData);
+                                                  const void* featureData, int featureSize);
 
 /**
  * @brief 人脸特征库检索接口,用于对某个人脸库的特征进行检索
@@ -354,7 +354,7 @@ RockIvaRetCode ROCKIVA_FACE_FeatureLibraryControl(const char* libName, RockIvaFa
  * @param results [OUT] 比对结果
  * @return RockIvaRetCode 
  */
-RockIvaRetCode ROCKIVA_FACE_SearchFeature(const char* libName, const void* featureData, uint32_t num, int32_t topK,
+RockIvaRetCode ROCKIVA_FACE_SearchFeature(const char* libName, const void* featureData, int featureSize, uint32_t num, int32_t topK,
                                           RockIvaFaceSearchResults* results);
 
 #ifdef __cplusplus
