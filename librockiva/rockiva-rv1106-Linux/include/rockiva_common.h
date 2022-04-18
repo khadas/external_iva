@@ -30,7 +30,7 @@ extern "C" {
 #define ROCKIVA_PIXEL_RATION_CONVERT(base, x) ((x) * 10000 / (base))  /* 像素到万分比的转换 */
 #define ROCKIVA_RATIO_PIXEL_CONVERT(base, x) (((x) * (base)) / 10000) /* 万分比到像素的转换 */
 
-#define ROCKIVA_MAX_OBJ_NUM          (40)                    /* 场景人数最大目标个数 */
+#define ROCKIVA_MAX_OBJ_NUM          (128)                    /* 场景最大目标个数 */
 
 #define ROCKIVA_PATH_LENGTH         (128)                    /* 文件路径字符串长度 */
 
