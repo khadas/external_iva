@@ -164,6 +164,8 @@ typedef struct {
     RockIvaRectExpandRatio captureExpand;         /* 抓拍时扩展人脸框上下左右的比例大小配置 */
     uint32_t alignWidth;                          /* 抓拍图像的对齐宽度 */
     RockIvaFaceCapacity faceCapacity;             /* 人脸最大检测、抓拍和识别个数配置，目前只实现设置最大抓拍个数，0[不限制] */
+    uint32_t optBestOverTime;                     /* ROCKIVA_FACE_OPT_BEST：人脸质量最优抓拍模式时超时时间设置ms，若人脸在此时段内未消失则上报此时段内的质量最优人脸；若为0，则在消失后才上报质量最优人脸*/
+    uint32_t faceQualityThrehold;                 /* 人脸抓拍时的最低人脸质量分阈值*/
 } RockIvaFaceRule;
 
 /* 人脸分析业务初始化参数配置 */
