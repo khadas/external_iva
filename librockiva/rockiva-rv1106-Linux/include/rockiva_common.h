@@ -1,6 +1,6 @@
 /****************************************************************************
 *
-*    Copyright (c) 2021 by Rockchip Corp.  All rights reserved.
+*    Copyright (c) 2022 by Rockchip Corp.  All rights reserved.
 *
 *    The material in this file is confidential and contains trade secrets
 *    of Rockchip Corporation. This is proprietary information owned by
@@ -70,19 +70,19 @@ typedef enum {
     ROCKIVA_IMAGE_FORMAT_YUV420P_YV12,    /* YUV420P YV12 */
     ROCKIVA_IMAGE_FORMAT_YUV420SP_NV12,   /* YUV420SP NV12 */
     ROCKIVA_IMAGE_FORMAT_YUV420SP_NV21,   /* YUV420SP NV21 */
-    ROCKIVA_IMAGE_FORMAT_JPEG,
+    ROCKIVA_IMAGE_FORMAT_JPEG,            /* JPEG(输入图像不支持该格式) */
 } RockIvaImageFormat;
 
 /**
  * 输入图像的旋转模式
  */
 typedef enum {
-    ROCKIVA_IMAGE_TRANSFORM_NONE              = 0x00,  ///< 正常
-    ROCKIVA_IMAGE_TRANSFORM_FLIP_H            = 0x01,  ///< 水平翻转
-    ROCKIVA_IMAGE_TRANSFORM_FLIP_V            = 0x02,  ///< 垂直翻转
-    ROCKIVA_IMAGE_TRANSFORM_ROTATE_90         = 0x04,  ///< 顺时针90度
-    ROCKIVA_IMAGE_TRANSFORM_ROTATE_180        = 0x03,  ///< 顺时针180度
-    ROCKIVA_IMAGE_TRANSFORM_ROTATE_270        = 0x07,  ///< 顺时针270度
+    ROCKIVA_IMAGE_TRANSFORM_NONE              = 0x00,  /* 正常 */
+    ROCKIVA_IMAGE_TRANSFORM_FLIP_H            = 0x01,  /* 水平翻转 */
+    ROCKIVA_IMAGE_TRANSFORM_FLIP_V            = 0x02,  /* 垂直翻转 */
+    ROCKIVA_IMAGE_TRANSFORM_ROTATE_90         = 0x04,  /* 顺时针90度 */
+    ROCKIVA_IMAGE_TRANSFORM_ROTATE_180        = 0x03,  /* 顺时针180度 */
+    ROCKIVA_IMAGE_TRANSFORM_ROTATE_270        = 0x07,  /* 顺时针270度 */
 } RockIvaImageTransform;
 
 /* 执行回调结果状态码 */
@@ -110,6 +110,9 @@ typedef enum {
     ROCKIVA_OBJECT_TYPE_FACE = 0x8,        /* 人脸 */
     ROCKIVA_OBJECT_TYPE_HEAD = 0x10,       /* 人头 */
     ROCKIVA_OBJECT_TYPE_PET = 0x20,        /* 宠物(猫/狗) */
+    ROCKIVA_OBJECT_TYPE_MOTORCYCLE = 0x40, /* 电瓶车 */
+    ROCKIVA_OBJECT_TYPE_BICYCLE = 0x80,    /* 自行车 */
+    ROCKIVA_OBJECT_TYPE_PLATE = 0X100      /* 车牌 */
 } RockIvaObjectType;
 
 /* 工作模式 */
@@ -178,11 +181,18 @@ typedef struct {
 
 /* 检测框向四周扩展的比例大小配置 */
 typedef struct {
-    float up;        /* 检测框向上按框高扩展的比例大小 */
-    float down;      /* 检测框向下按框高扩展的比例大小 */
-    float left;      /* 检测框向左按框宽扩展的比例大小 */
-    float right;     /* 检测框向右按框宽扩展的比例大小 */
+    float up;        /* 检测框向上按框高扩展的比例大小，扩展大小为up*人脸框高 */
+    float down;      /* 检测框向下按框高扩展的比例大小，扩展大小为down*人脸框高 */
+    float left;      /* 检测框向左按框宽扩展的比例大小，扩展大小为left*人脸框宽 */
+    float right;     /* 检测框向右按框宽扩展的比例大小，扩展大小为right*人脸框宽 */
 } RockIvaRectExpandRatio;
+
+/* 角度信息 */
+typedef struct {
+    int16_t pitch;             /* 俯仰角,表示绕x轴旋转角度 */
+    int16_t yaw;               /* 偏航角,表示绕y轴旋转角度 */
+    int16_t roll;              /* 翻滚角,表示绕z轴旋转角度 */
+} RockIvaAngle;
 
 /* 图像信息 */
 typedef struct {
@@ -201,6 +211,7 @@ typedef struct {
     uint8_t* dataAddr;     /* 图像数据地址 */
     uint8_t* dataPhyAddr;  /* 图像数据物理地址 */
     int32_t dataFd;        /* 图像数据DMA buffer fd */
+    void* extData;         /* 用户自定义扩展数据 */
 } RockIvaImage;
 
 /* 单个目标检测结果信息 */
@@ -215,6 +226,7 @@ typedef struct {
 /* 目标检测结果 */
 typedef struct {
     uint32_t frameId;                               /* 帧ID */
+    RockIvaImage frame;                             /* 对应的输入图像帧 */
     uint32_t channelId;                             /* 帧通道号 */
     uint32_t objNum;                                /* 目标个数 */
     RockIvaObjectInfo objInfo[ROCKIVA_MAX_OBJ_NUM]; /* 各目标检测信息 */
@@ -227,7 +239,7 @@ typedef struct {
 typedef struct {
     uint32_t channelId;
     uint32_t count;
-    uint32_t frameId[ROCKIVA_MAX_OBJ_NUM];
+    RockIvaImage frames[ROCKIVA_MAX_OBJ_NUM];
 } RockIvaReleaseFrames;
 
 /* SDK通用配置 */
@@ -240,6 +252,7 @@ typedef struct {
     uint32_t channelId;                  /* 通道号 */
     RockIvaImageInfo imageInfo;          /* 输入图像信息 */
     RockIvaAreas roiAreas;               /* 有效区域 */
+    uint32_t detObjectType;              /* 配置要检测的目标,例如检测人\机动车\非机动车: ROCKIVA_OBJECT_TYPE_PERSON|ROCKIVA_OBJECT_TYPE_VEHICLE|ROCKIVA_OBJECT_TYPE_NON_VEHICLE */
 } RockIvaInitParam;
 
 /********************************************************************/

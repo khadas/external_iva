@@ -1,6 +1,6 @@
 /****************************************************************************
 *
-*    Copyright (c) 2021 by Rockchip Corp.  All rights reserved.
+*    Copyright (c) 2022 by Rockchip Corp.  All rights reserved.
 *
 *    The material in this file is confidential and contains trade secrets
 *    of Rockchip Corporation. This is proprietary information owned by
@@ -60,8 +60,9 @@ typedef struct {
     RockIvaSize minObjSize[3];                  /* 万分比表示 最小目标: 0机动车 1非机动车 2行人 */
     RockIvaSize maxObjSize[3];                  /* 万分比表示 最大目标: 0机动车 1非机动车 2行人 */
     uint32_t objType;                           /* 配置触发目标类型： RockIvaBaRuleObjectFilter 例：车、人：RULE_OBJ_VEHICLE | RULE_OBJ_PERSON */  
-    uint32_t rulePriority;                      /* 规则优先级： 0 高， 1 中， 2 低 */     
-    uint32_t sense;                             /* 灵敏度,1~100 */
+    uint8_t rulePriority;                       /* 规则优先级： 0 高， 1 中， 2 低 */
+    uint8_t sense;                              /* 灵敏度,1~100 */
+    uint8_t trigerMode;                         /* 触发模式： 0： 目标仅触发一次；1： 目标每次越界都触发 */
 } RockIvaBaWireRule;
 
 /* 区域规则 */
@@ -72,9 +73,10 @@ typedef struct {
     RockIvaBaTripEvent event;                   /* 区域事件 */
     RockIvaSize minObjSize[3];                  /* 万分比表示 最小目标: 0机动车 1非机动车 2行人 */
     RockIvaSize maxObjSize[3];                  /* 万分比表示 最大目标: 0机动车 1非机动车 2行人 */
-    uint32_t objType;                           /* 配置触发目标类型： RockIvaBaRuleObjectFilter 例：车、人：RULE_OBJ_VEHICLE | RULE_OBJ_PERSON */  
+    uint32_t objType;                           /* 配置触发目标类型： RockIvaBaRuleObjectFilter 例：车、人：RULE_OBJ_VEHICLE | RULE_OBJ_PERSON */
     uint32_t alertTime;                         /* 告警时间设置 */
-    uint32_t sense;                             /* 灵敏度,1~100 */
+    uint8_t sense;                              /* 灵敏度,1~100 */
+    uint8_t checkEnter;                         /* 区域入侵规则是否需要检查目标有进入　[0: 不启用，１：启用]　*/
 } RockIvaBaAreaRule;
 
 /* 行为分析类规则配置 */
@@ -116,6 +118,7 @@ typedef struct {
 /* 检测结果全部信息 */
 typedef struct {
     uint32_t frameId;                                         /* 输入图像帧ID */
+    RockIvaImage frame;                                       /* 对应的输入图像帧 */
     uint32_t channelId;                                       /* 通道号 */
     uint32_t objNum;                                          /* 目标个数 */
     RockIvaBaObjectInfo triggerObjects[ROCKIVA_MAX_OBJ_NUM];  /* 触发周界规则的目标 */
@@ -128,10 +131,10 @@ typedef struct {
  *
  * result 结果
  * status 状态码
- * userData 用户自定义数据
+ * userdata 用户自定义数据
  */
 typedef void (*ROCKIVA_BA_ResultCallback)(const RockIvaBaResult* result, const RockIvaExecuteStatus status,
-                                          void* userData);
+                                          void* userdata);
 
 /**
  * @brief 初始化
