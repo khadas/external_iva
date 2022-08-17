@@ -1,6 +1,6 @@
 /****************************************************************************
 *
-*    Copyright (c) 2021 by Rockchip Corp.  All rights reserved.
+*    Copyright (c) 2022 by Rockchip Corp.  All rights reserved.
 *
 *    The material in this file is confidential and contains trade secrets
 *    of Rockchip Corporation. This is proprietary information owned by
