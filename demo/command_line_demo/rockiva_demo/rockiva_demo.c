@@ -481,7 +481,7 @@ int main(int argc, char** argv)
         img_buf->image.frameId = i;
         img_buf->image.extData = img_buf;
         printf("%lu PushFrame %d\n", GetTimeStampMS(), i);
-        ret = ROCKIVA_PushFrame(iva_ctx.handle, &img_buf->image);
+        ret = ROCKIVA_PushFrame(iva_ctx.handle, &img_buf->image, NULL);
 
     next_frame:
         // about 10 fps

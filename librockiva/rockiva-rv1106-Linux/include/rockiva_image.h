@@ -20,6 +20,23 @@ extern "C"{
 #endif
 
 /**
+ * @brief 为图像分配内存
+ * 
+ * @param img [IN/OUT] 图像(需要设置好width/height/format)
+ * @param type [IN] 分配内存类型
+ * @return RockIvaRetCode 执行结果
+ */
+RockIvaRetCode ROCKIVA_IMAGE_AllocMem(RockIvaImage *img, RockIvaMemType type);
+
+/**
+ * @brief 释放图像内存
+ * 
+ * @param img [IN] 图像
+ * @return RockIvaRetCode 执行结果
+ */
+RockIvaRetCode ROCKIVA_IMAGE_FreeMem(RockIvaImage *img);
+
+/**
  * @brief 图像裁剪
  * 
  * @param srcImg [IN] 原图像
@@ -63,6 +80,24 @@ int ROCKIVA_IMAGE_Get_Size(const RockIvaImage *srcImg);
  * @return RockIvaRectangle 缩放后的矩形框(坐标值范围0~9999)
  */
 RockIvaRectangle ROCKIVA_RECT_Scaling(const RockIvaRectangle *srcRect, float ratio);
+
+/**
+ * @brief 保存图片
+ * 
+ * @param path [IN] 保存图片路径，支持jpg和png结尾
+ * @param image [IN] 要保存的image对象
+ * @return RockIvaRetCode 
+ */
+RockIvaRetCode ROCKIVA_IMAGE_Write(const char* path, const RockIvaImage* image);
+
+/**
+ * @brief 读取图片
+ * 
+ * @param path [IN] 读取图片路径，支持jpg和png结尾
+ * @param image [OUT] 读取的image对象
+ * @return RockIvaRetCode 
+ */
+RockIvaRetCode ROCKIVA_IMAGE_Read(const char* path, RockIvaImage* image);
 
 #ifdef  __cplusplus
 }
