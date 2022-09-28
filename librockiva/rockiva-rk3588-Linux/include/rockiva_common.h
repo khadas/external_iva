@@ -85,6 +85,14 @@ typedef enum {
     ROCKIVA_IMAGE_TRANSFORM_ROTATE_270        = 0x07,  /* 顺时针270度 */
 } RockIvaImageTransform;
 
+/**
+ * 内存类型
+ */
+typedef enum {
+    ROCKIVA_MEM_TYPE_CPU = 0,       /* 虚拟地址内存 */
+    ROCKIVA_MEM_TYPE_DMA = 1        /* DMA BUF内存 */
+} RockIvaMemType;
+
 /* 执行回调结果状态码 */
 typedef enum {
     ROCKIVA_SUCCESS = 0,            /* 运行结果正常   */
@@ -120,6 +128,12 @@ typedef enum {
     ROCKIVA_MODE_VIDEO   = 0,              /* 视频流模式(使能跟踪) */
     ROCKIVA_MODE_PICTURE = 1,              /* 图片模式(不使能跟踪) */
 } RockIvaWorkMode;
+ 
+typedef enum {
+    ROCKIVA_CAMERA_TYPE_ONE = 0,           /* 单摄 */
+    ROCKIVA_CAMERA_TYPE_DUAL = 1,          /* 双摄，能够提供RGB和IR两路图像 */
+    ROCKIVA_CAMERA_TYPE_SL = 2,            /* 结构光摄像头，能够提供RGB、IR和Depth三路图像 */
+} RockIvaCameraType;
 
 /********************************************************************/
 /*                          类型定义                                 */
@@ -137,8 +151,8 @@ typedef struct {
 
 /* 点坐标 */
 typedef struct {
-    uint16_t x; /* 横坐标，万分比表示，数值范围0~9999 */
-    uint16_t y; /* 纵坐标，万分比表示，数值范围0~9999 */
+    int16_t x; /* 横坐标，万分比表示，数值范围0~9999 */
+    int16_t y; /* 纵坐标，万分比表示，数值范围0~9999 */
 } RockIvaPoint;
 
 /* 线坐标 */
@@ -232,10 +246,7 @@ typedef struct {
     RockIvaObjectInfo objInfo[ROCKIVA_MAX_OBJ_NUM]; /* 各目标检测信息 */
 } RockIvaDetectResult;
 
-/**
- * @brief 需要释放的帧列表
- *
- */
+/* 需要释放的帧列表 */
 typedef struct {
     uint32_t channelId;
     uint32_t count;
@@ -252,8 +263,21 @@ typedef struct {
     uint32_t channelId;                  /* 通道号 */
     RockIvaImageInfo imageInfo;          /* 输入图像信息 */
     RockIvaAreas roiAreas;               /* 有效区域 */
+    RockIvaCameraType cameraType;        /* 摄像头类型 */
     uint32_t detObjectType;              /* 配置要检测的目标,例如检测人\机动车\非机动车: ROCKIVA_OBJECT_TYPE_PERSON|ROCKIVA_OBJECT_TYPE_VEHICLE|ROCKIVA_OBJECT_TYPE_NON_VEHICLE */
 } RockIvaInitParam;
+
+/* 推帧提供的额外信息 */
+typedef struct {
+    RockIvaAreas roiAreas;               /* 有效区域（该参数优先级高于RockIvaInitParam.roiArea） */
+    RockIvaObjectInfo objInfo;           /* 需要处理的目标信息（可以直接用于识别分析不用再做目标检测） */
+} RockIvaFrameExtraInfo;
+
+typedef struct {
+    RockIvaImage rgb;
+    RockIvaImage ir;
+    RockIvaImage depth;
+} RockIvaMultiImage;
 
 /********************************************************************/
 
@@ -300,17 +324,17 @@ RockIvaRetCode ROCKIVA_SetFrameReleaseCallback(RockIvaHandle handle, ROCKIVA_Fra
  * @param inputImg [IN] 输入图像帧
  * @return RockIvaRetCode
  */
-RockIvaRetCode ROCKIVA_PushFrame(RockIvaHandle handle, const RockIvaImage* inputImg);
+RockIvaRetCode ROCKIVA_PushFrame(RockIvaHandle handle, const RockIvaImage* inputImg, const RockIvaFrameExtraInfo* extraInfo);
 
 /**
- * @brief 输入图像帧
- *
+ * @brief 输入图像帧(多摄)
+ * 
  * @param handle [IN] handle
  * @param inputImg [IN] 输入图像帧
- * @param roiAreas [IN] 有效区域（该参数优先级高于RockIvaInitParam.roiArea）
- * @return RockIvaRetCode
+ * @param extraInfo [IN] 额外信息
+ * @return RockIvaRetCode 
  */
-RockIvaRetCode ROCKIVA_PushFrameWithRoi(RockIvaHandle handle, const RockIvaImage* inputImg, const RockIvaAreas* roiAreas);
+RockIvaRetCode ROCKIVA_PushFrame2(RockIvaHandle handle, const RockIvaMultiImage* inputImg, const RockIvaFrameExtraInfo* extraInfo);
 
 /**
  * @brief 获取SDK版本号

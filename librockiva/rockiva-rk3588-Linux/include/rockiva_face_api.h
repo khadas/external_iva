@@ -39,9 +39,10 @@ typedef enum {
 
 /* 人脸业务类型 */
 typedef enum {
-    ROCKIVA_FACE_MODE_NORMAL   = 0,             /* 正常模式(根据RockIvaWorkMode配置) */
-    ROCKIVA_FACE_MODE_IMPORT  = 1,              /* 导库模式(底图特征提取) */
-    ROCKIVA_FACE_MODE_SEARCH  = 2,              /* 以图搜图模式 */
+    ROCKIVA_FACE_MODE_NORMAL = 0,           /* 正常模式(根据RockIvaWorkMode配置) */
+    ROCKIVA_FACE_MODE_IMPORT = 1,           /* 导库模式(底图特征提取) */
+    ROCKIVA_FACE_MODE_SEARCH = 2,           /* 以图搜图模式 */
+    ROCKIVA_FACE_MODE_PANEL = 3,            /* 人脸面板机模式（近距离人脸识别分析，支持多摄） */
 } RockIvaFaceWorkMode;
 
 /* 人脸状态 */
@@ -126,6 +127,7 @@ typedef enum {
     ROCKIVA_FACE_CAP_TYPE_TIMEOUT,                    /* 超时抓拍帧 */
     ROCKIVA_FACE_CAP_TYPE_QUALITY,                    /* 满足阈值抓拍 */
     ROCKIVA_FACE_CAP_TYPE_FORENOTICE,                 /* 提前上报人脸分析结果（如口罩佩戴判断等） */
+    ROCKIVA_FACE_CAP_TYPE_CUSTOM,                     /* 用户指定 */
 } RockIvaFaceCapFrameType;
 
 /* 人脸质量结果 */
@@ -190,6 +192,7 @@ typedef struct {
     uint32_t optBestOverTime;                     /* 人脸质量最优抓拍超时时间设置ms，若人脸在此时段内未消失则上报此时段内的质量最优人脸；若为0，则在消失后才上报质量最优人脸 */
     uint32_t faceQualityThrehold;                 /* 快速抓拍时满足抓拍的人脸质量分阈值 */
     uint8_t captureWithMask;                      /* 支持抓拍戴口罩的人脸并上报人脸是否佩戴口罩[0：关；1：开；2：开且口罩提前上报(满足qualityConfig配置)]，若打开则qualityConfig的minMouthScore和minNoseScore过滤失效 */
+    uint8_t faceIouThreshold;                     /* 多摄模式下RGB和IR图像中人脸需要满足的IOU阈值，百分比范围[0, 100]，默认0为50% */
 } RockIvaFaceRule;
 
 /* 人脸分析业务初始化参数配置 */
@@ -234,6 +237,7 @@ typedef struct {
     RockIvaFaceQualityInfo faceQuality;                   /* 人脸质量信息 */
     RockIvaFaceState faceState;                           /* 人脸状态 */
     RockIvaObjectInfo person;                             /* 关联的人体检测信息 */
+    RockIvaObjectInfo faceOnIR;                           /* IR图像中关联的人脸 */
 } RockIvaFaceInfo;
 
 /* 单个目标人脸分析信息 */
@@ -348,6 +352,15 @@ RockIvaRetCode ROCKIVA_FACE_Reset(RockIvaHandle handle, const RockIvaFaceTaskPar
  * @return RockIvaRetCode 
  */
 RockIvaRetCode ROCKIVA_FACE_Release(RockIvaHandle handle);
+
+/**
+ * @brief 指定需要抓拍分析识别的人脸，可以调用多次设定多个人脸（需要在检测结果回调中使用，仅faceCaptureEnable==0时候可用）
+ * 
+ * @param handle [IN] handle
+ * @param trackId [IN] 人脸跟踪id
+ * @return RockIvaRetCode 
+ */
+RockIvaRetCode ROCKIVA_FACE_SetAnalyseFace(RockIvaHandle handle, int trackId);
 
 /**
  * @brief 1:1人脸特征比对接口
