@@ -22,12 +22,14 @@ extern "C"{
 /* ------------------------------------------------------------------ */
 
 #define ROCKIVA_FACE_MAX_FACE_NUM            (40)                       /* 最大人脸数目 */
-#define ROCKIVA_AREA_POINT_NUM_MAX           (6)                        /* 最大区域点数 */
 #define ROCKIVA_FACE_FORBIDDEN_AREA          (16)                       /* 最大支持的屏蔽检测区域 */
 #define ROCKIVA_FACE_FEATURE_SIZE_MAX        (4096)                     /* 特征值空间大小 */
 #define ROCKIVA_FACE_MODEL_VERSION           (64)                       /* 模型版本号字符串长度 */
 #define ROCKIVA_FACE_INFO_SIZE_MAX           (32)                       /* 人脸入库信息字符串长度(用户填入) */
 #define ROCKIVA_FACE_ID_MAX_NUM              (100)                      /* 特征比对结果的TOP数目（最大）*/
+
+#define ROCKIVA_FACE_PARAM_LANDMARK_ID "FACE/LANDMARK/ID"
+#define ROCKIVA_FACE_PARAM_LANDMARK106_ID "FACE/LANDMARK106/ID"
 
 /* ---------------------------类型定义----------------------------------- */
 
@@ -36,6 +38,12 @@ typedef enum {
     ROCKIVA_FACE_OPT_BEST,                      /* 效果优先模式 目标从出现到消失的最优人脸 */
     ROCKIVA_FACE_OPT_FAST,                      /* 快速优先模式 目标从出现的一个时间段内的最优人脸 */
 } RockIvaFaceOptType;
+
+/* 多人脸选择顺序 */
+typedef enum {
+    ROCKIVA_FACE_PRIO_SIZE,                  /* 按人脸从大到小顺序选择 */
+    ROCKIVA_FACE_PRIO_CENTER,                /* 按人脸靠近中心顺序选择 */
+} RockIvaFacePriorityMode;
 
 /* 人脸业务类型 */
 typedef enum {
@@ -138,7 +146,8 @@ typedef enum {
     ROCKIVA_FACE_QUALITY_SIZE_FAIL,                 /* 人脸过小 */
     ROCKIVA_FACE_QUALITY_CLARITY_FAIL,              /* 人脸模糊 */
     ROCKIVA_FACE_QUALITY_ANGLE_FAIL,                /* 人脸角度过大 */
-    ROCKIVA_FACE_QUALITY_MASK_FAIL                  /* 人脸遮挡 */
+    ROCKIVA_FACE_QUALITY_MASK_FAIL,                 /* 人脸遮挡 */
+    ROCKIVA_FACE_QUALITY_USER_ABANDON               /* 用户丢弃人脸 */
 } RockIvaFaceQualityResultCode;
 
 /* ---------------------------规则配置----------------------------------- */
@@ -149,6 +158,7 @@ typedef struct {
     uint8_t faceRecognizeEnable;                /* 人脸识别业务 1：有效 */
     uint8_t faceAttributeEnable;                /* 人脸属性分析业务 1:有效 */
     uint8_t relatedPersonEnable;                /* 是否关联人体 1：有效 */
+    uint8_t faceLandmarkEnable;                 /* 人脸关键点 1：使能5点 2: 使能5点和106点 */
 } RockIvaFaceTaskType;
 
 /* 人脸SDK处理能力 */
@@ -172,6 +182,7 @@ typedef struct {
 /* 抓拍上报图像配置 */
 typedef struct {
     uint8_t mode;                               /* 上报抓拍图像模式，[0：无； 1：小图； 2：大图； 3：大小图] */
+    uint8_t originImageType;                    /* 上报大图格式 [0: 原始图像； 1: JPEG编码图像] */
     uint8_t resizeMode;                         /* 抓拍图像缩放方式 [0: 保持目标大小，除非目标大小超过imageInfo设定大小； 1: 固定缩放到imageInfo设定大小] */
     uint8_t alignWidth;                         /* 抓拍图像的对齐宽度 */
     RockIvaRectExpandRatio expand;              /* 抓拍图像扩展人脸框上下左右的比例大小配置 */
@@ -193,6 +204,7 @@ typedef struct {
     uint32_t faceQualityThrehold;                 /* 快速抓拍时满足抓拍的人脸质量分阈值 */
     uint8_t captureWithMask;                      /* 支持抓拍戴口罩的人脸并上报人脸是否佩戴口罩[0：关；1：开；2：开且口罩提前上报(满足qualityConfig配置)]，若打开则qualityConfig的minMouthScore和minNoseScore过滤失效 */
     uint8_t faceIouThreshold;                     /* 多摄模式下RGB和IR图像中人脸需要满足的IOU阈值，百分比范围[0, 100]，默认0为50% */
+    RockIvaFacePriorityMode prioMode;             /* 多人脸时选择顺序 */
 } RockIvaFaceRule;
 
 /* 人脸分析业务初始化参数配置 */
@@ -238,6 +250,9 @@ typedef struct {
     RockIvaFaceState faceState;                           /* 人脸状态 */
     RockIvaObjectInfo person;                             /* 关联的人体检测信息 */
     RockIvaObjectInfo faceOnIR;                           /* IR图像中关联的人脸 */
+    uint32_t landmarksNum;                                /* 人脸关键点数量 */
+    RockIvaPoint landmarks[106];                          /* 人脸关键点 */
+    RockIvaFaceMaskType mask;                             /* 口罩 */
 } RockIvaFaceInfo;
 
 /* 单个目标人脸分析信息 */
@@ -258,18 +273,24 @@ typedef struct {
     RockIvaFaceInfo faceRecord[ROCKIVA_FACE_MAX_FACE_NUM];   /* 人脸记录信息 */
 } RockIvaFaceDetResult;
 
+typedef struct {
+    RockIvaFaceInfo faceInfo;                                /* 人脸基本检测信息 */
+    RockIvaFaceQualityResultCode qualityResult;              /* 人脸质量结果，如果结果不是OK则没有人脸分析信息 */
+    RockIvaFaceAnalyseInfo faceAnalyseInfo;                  /* 人脸分析信息 */
+    RockIvaImage captureImage;                               /* 人脸抓拍小图 */
+    RockIvaImage originImage;                                /* 抓拍帧背景大图 */
+    RockIvaRectangle faceRectOnCaptureImage;                 /* 人脸抓拍小图上的人脸位置 */
+} RockIvaFaceCapResult;
+
 /* 人脸抓拍处理结果 */
 typedef struct {
     uint32_t channelId;                                      /* 通道号 */
     uint32_t frameId;                                        /* 帧ID */
     RockIvaImage frame;                                      /* 对应的输入图像帧, 如果没有配置缓存大图此时图像缓存数据不能访问 */
     RockIvaFaceCapFrameType faceCapFrameType;                /* 抓拍帧类型 */
-    RockIvaFaceInfo faceInfo;                                /* 人脸基本检测信息 */
-    RockIvaFaceQualityResultCode qualityResult;              /* 人脸质量结果，如果结果不是OK则没有人脸分析信息 */
-    RockIvaFaceAnalyseInfo faceAnalyseInfo;                  /* 人脸分析信息 */
-    RockIvaImage captureImage;                               /* 人脸抓拍小图 */
-    RockIvaRectangle faceRectOnCaptureImage;                 /* 人脸抓拍小图上的人脸位置 */
-} RockIvaFaceCapResult;
+    uint32_t num;                                            /* 人脸结果数量 */
+    RockIvaFaceCapResult faceResults[ROCKIVA_FACE_MAX_FACE_NUM];    /* 人脸结果 */
+} RockIvaFaceCapResults;
 
 /* 入库特征对应的详细信息，用户输入 */
 typedef struct {
@@ -316,7 +337,7 @@ typedef void(*ROCKIVA_FACE_DetResultCallback)(const RockIvaFaceDetResult *result
  * status 状态码
  * userdata 用户自定义数据
  */
-typedef void(*ROCKIVA_FACE_AnalyseResultCallback)(const RockIvaFaceCapResult *result, const RockIvaExecuteStatus status,
+typedef void(*ROCKIVA_FACE_AnalyseResultCallback)(const RockIvaFaceCapResults *result, const RockIvaExecuteStatus status,
                                         void *userdata);
 
 typedef struct {
@@ -361,6 +382,15 @@ RockIvaRetCode ROCKIVA_FACE_Release(RockIvaHandle handle);
  * @return RockIvaRetCode 
  */
 RockIvaRetCode ROCKIVA_FACE_SetAnalyseFace(RockIvaHandle handle, int trackId);
+
+/**
+ * @brief 用户指定不需要的人脸，可以调用多次设定多个人脸（只可在检测结果回调ROCKIVA_FACE_DetResultCallback中使用）
+ * 
+ * @param handle [IN] handle
+ * @param trackId [IN] 人脸跟踪id
+ * @return RockIvaRetCode
+ */
+RockIvaRetCode ROCKIVA_FACE_SetFilteredFace(RockIvaHandle handle, int trackId);
 
 /**
  * @brief 1:1人脸特征比对接口

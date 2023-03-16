@@ -48,6 +48,15 @@ RockIvaRetCode ROCKIVA_IMAGE_FreeMem(RockIvaImage *img);
 RockIvaRetCode ROCKIVA_IMAGE_Crop(const RockIvaImage *srcImg, const RockIvaRectangle *rect, int alignSize, RockIvaImage *cropImg, RockIvaRectExpandRatio *expand);
 
 /**
+ * @brief 图像缩放/格式转换
+ * 
+ * @param srcImg [IN] 原图像
+ * @param dstImg [OUT] 目标图像
+ * @return RockIvaRetCode 
+ */
+RockIvaRetCode ROCKIVA_IMAGE_Convert(const RockIvaImage *srcImg, RockIvaImage *dstImg);
+
+/**
  * @brief 图像拷贝(目前只能拷贝虚拟地址内存的图像数据,目标图像用完后需要释放)
  * 
  * @param srcImg [IN] 原图像

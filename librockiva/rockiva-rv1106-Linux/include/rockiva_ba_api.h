@@ -19,7 +19,7 @@
 extern "C" {
 #endif
 
-#define ROCKIVA_BA_MAX_RULE_NUM          (4)                 /* 业务中最多规则数量 */
+#define ROCKIVA_BA_MAX_RULE_NUM          (8)                 /* 业务中最多规则数量 */
 
 /* ---------------------------规则配置----------------------------------- */
 /* 周界规则类型（绊线/区域事件）*/
@@ -32,34 +32,25 @@ typedef enum {
     ROCKIVA_BA_TRIP_EVENT_STAY = 5,                  /* 区域入侵 */
 } RockIvaBaTripEvent;
 
-/* 触发规则目标类型过滤 */
-typedef enum {
-    ROCKIVA_BA_RULE_OBJ_NONE = 0,
-    ROCKIVA_BA_RULE_OBJ_VEHICLE = 1,
-    ROCKIVA_BA_RULE_OBJ_NONVEHICLE = 2,
-    ROCKIVA_BA_RULE_OBJ_PERSON = 4,
-    ROCKIVA_BA_RULE_OBJ_FULL = 7,
-} RockIvaBaRuleObjectFilter;
-
 /* 目标规则触发类型 */
 typedef enum {
-    ROCKIVA_BA_RULE_NONE = 0b000000000000,
-    ROCKIVA_BA_RULE_CROSS = 0b000000000001,          /* 拌线 */
-    ROCKIVA_BA_RULE_INAREA = 0b000000000010,         /* 进入区域 */
-    ROCKIVA_BA_RULE_OUTAREA = 0b000000000100,        /* 离开区域 */
-    ROCKIVA_BA_RULE_STAY = 0b000000001000,           /* 区域入侵 */
+    ROCKIVA_BA_RULE_NONE = 0,
+    ROCKIVA_BA_RULE_CROSS = 0x1,          /* 拌线 */
+    ROCKIVA_BA_RULE_INAREA = 0x2,         /* 进入区域 */
+    ROCKIVA_BA_RULE_OUTAREA = 0x4,        /* 离开区域 */
+    ROCKIVA_BA_RULE_STAY = 0x8,           /* 区域入侵 */
 } RockIvaBaRuleTriggerType;
 
 /* 越界规则 */
 typedef struct {
     uint8_t ruleEnable;                         /* 规则是否启用，1->启用，0->不启用 */
-    uint32_t ruleID;                            /* 规则ID，有效范围[0, 3] */
+    uint32_t ruleID;                            /* 规则ID */
     RockIvaLine line;                           /* 越界线配置 */
     RockIvaLine directLine;                     /* 方向线配置 */
     RockIvaBaTripEvent event;                   /* 越界方向 */
-    RockIvaSize minObjSize[3];                  /* 万分比表示 最小目标: 0机动车 1非机动车 2行人 */
-    RockIvaSize maxObjSize[3];                  /* 万分比表示 最大目标: 0机动车 1非机动车 2行人 */
-    uint32_t objType;                           /* 配置触发目标类型： RockIvaBaRuleObjectFilter 例：车、人：RULE_OBJ_VEHICLE | RULE_OBJ_PERSON */  
+    RockIvaSize minObjSize[ROCKIVA_OBJECT_TYPE_MAX];                  /* 万分比表示 最小目标 */
+    RockIvaSize maxObjSize[ROCKIVA_OBJECT_TYPE_MAX];                  /* 万分比表示 最大目标 */
+    uint32_t objType;                           /* 配置触发目标类型 */  
     uint8_t rulePriority;                       /* 规则优先级： 0 高， 1 中， 2 低 */
     uint8_t sense;                              /* 灵敏度,1~100 */
     uint8_t trigerMode;                         /* 触发模式： 0： 目标仅触发一次；1： 目标每次越界都触发 */
@@ -68,12 +59,12 @@ typedef struct {
 /* 区域规则 */
 typedef struct {
     uint8_t ruleEnable;                         /* 规则是否启用，1->启用，0->不启用 */
-    uint32_t ruleID;                            /* 规则ID，有效范围[1, 256] */
+    uint32_t ruleID;                            /* 规则ID */
     RockIvaArea area;                           /* 区域配置 */
     RockIvaBaTripEvent event;                   /* 区域事件 */
-    RockIvaSize minObjSize[3];                  /* 万分比表示 最小目标: 0机动车 1非机动车 2行人 */
-    RockIvaSize maxObjSize[3];                  /* 万分比表示 最大目标: 0机动车 1非机动车 2行人 */
-    uint32_t objType;                           /* 配置触发目标类型： RockIvaBaRuleObjectFilter 例：车、人：RULE_OBJ_VEHICLE | RULE_OBJ_PERSON */
+    RockIvaSize minObjSize[ROCKIVA_OBJECT_TYPE_MAX];                  /* 万分比表示 最小目标 */
+    RockIvaSize maxObjSize[ROCKIVA_OBJECT_TYPE_MAX];                  /* 万分比表示 最大目标 */
+    uint32_t objType;                           /* 配置触发目标类型 */
     uint32_t alertTime;                         /* 告警时间设置 */
     uint8_t sense;                              /* 灵敏度,1~100 */
     uint8_t checkEnter;                         /* 区域入侵规则是否需要检查目标有进入　[0: 不启用，１：启用]　*/
@@ -110,9 +101,11 @@ typedef struct {
 
 /* 触发周界规则的单个目标基本信息 */
 typedef struct {
-    RockIvaObjectInfo objInfo;                  /* 目标信息 */
-    uint32_t triggerRules;                      /* 目标触发规则   */
-    RockIvaBaTrigger firstTrigger;              /* 目标第一次触发的规则,可用于抓拍 */
+    RockIvaObjectInfo objInfo;                          /* 目标信息 */
+    uint32_t triggerRules;                              /* 目标触发规则 */
+    uint32_t triggerRulesNum;                           /* 目标触发规则数量 */
+    uint32_t triggerRulesID[ROCKIVA_BA_MAX_RULE_NUM];   /* 目标触发的所有规则ID */
+    RockIvaBaTrigger firstTrigger;                      /* 目标第一次触发的规则,可用于抓拍 */
 } RockIvaBaObjectInfo;
 
 /* 检测结果全部信息 */

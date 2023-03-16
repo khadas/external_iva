@@ -24,15 +24,21 @@ extern "C" {
 /********************************************************************/
 
 #define ROCKIVA_MAX_FRAMERATE      (60)   /* 最大帧率 */
-#define ROCKIVA_AREA_POINT_NUM_MAX (6)    /* 最大区域点数 */
-#define ROCKIVA_AREA_NUM_MAX       (16)   /* 最大检测和屏蔽区域数 */
+#define ROCKIVA_AREA_POINT_NUM_MAX (32)   /* 最大区域点数 */
+#define ROCKIVA_AREA_NUM_MAX       (16)   /* 最大区域数 */
 
 #define ROCKIVA_PIXEL_RATION_CONVERT(base, x) ((x) * 10000 / (base))  /* 像素到万分比的转换 */
 #define ROCKIVA_RATIO_PIXEL_CONVERT(base, x) (((x) * (base)) / 10000) /* 万分比到像素的转换 */
 
+#define ROCKIVA_OBJECT_TYPE_BITMASK(index) (1<<index)
+#define ROCKIVA_OBJECT_TYPE_FULL (0U-1)
+
 #define ROCKIVA_MAX_OBJ_NUM          (128)                    /* 场景最大目标个数 */
 
 #define ROCKIVA_PATH_LENGTH         (128)                    /* 文件路径字符串长度 */
+
+#define ROCKIVA_PARAM_MAX_NUM (8)
+#define ROCKIVA_PARAM_VALUE_MAX_SIZE (32)
 
 /********************************************************************/
 /*                          枚举定义                                 */
@@ -111,17 +117,29 @@ typedef enum {
 
 /* 目标类型  */
 typedef enum {
-    ROCKIVA_OBJECT_TYPE_NONE = 0x0,        /* 未知 */
-    ROCKIVA_OBJECT_TYPE_PERSON = 0x1,      /* 行人 */
-    ROCKIVA_OBJECT_TYPE_VEHICLE = 0x2,     /* 机动车 */
-    ROCKIVA_OBJECT_TYPE_NON_VEHICLE = 0x4, /* 非机动车 */
-    ROCKIVA_OBJECT_TYPE_FACE = 0x8,        /* 人脸 */
-    ROCKIVA_OBJECT_TYPE_HEAD = 0x10,       /* 人头 */
-    ROCKIVA_OBJECT_TYPE_PET = 0x20,        /* 宠物(猫/狗) */
-    ROCKIVA_OBJECT_TYPE_MOTORCYCLE = 0x40, /* 电瓶车 */
-    ROCKIVA_OBJECT_TYPE_BICYCLE = 0x80,    /* 自行车 */
-    ROCKIVA_OBJECT_TYPE_PLATE = 0X100      /* 车牌 */
+    ROCKIVA_OBJECT_TYPE_NONE = 0,           /* 未知 */
+    ROCKIVA_OBJECT_TYPE_PERSON = 1,         /* 行人 */
+    ROCKIVA_OBJECT_TYPE_VEHICLE = 2,        /* 机动车 */
+    ROCKIVA_OBJECT_TYPE_NON_VEHICLE = 3,    /* 非机动车 */
+    ROCKIVA_OBJECT_TYPE_FACE = 4,           /* 人脸 */
+    ROCKIVA_OBJECT_TYPE_HEAD = 5,           /* 人头 */
+    ROCKIVA_OBJECT_TYPE_PET = 6,            /* 宠物(猫/狗) */
+    ROCKIVA_OBJECT_TYPE_MOTORCYCLE = 7,     /* 电瓶车 */
+    ROCKIVA_OBJECT_TYPE_BICYCLE = 8,        /* 自行车 */
+    ROCKIVA_OBJECT_TYPE_PLATE = 9,          /* 车牌 */
+    ROCKIVA_OBJECT_TYPE_BABY = 10,          /* 婴幼儿 */
+    ROCKIVA_OBJECT_TYPE_MAX
 } RockIvaObjectType;
+
+/* 前级目标检测算法模型 */
+typedef enum {
+    ROCKIVA_DET_MODEL_NONE = 0,           /* 未设置，不需要前级目标检测 */
+    ROCKIVA_DET_MODEL_CLS7 = 1,           /* 检测类别：人形、人脸、车辆车牌、非机动车、宠物 */
+    ROCKIVA_DET_MODEL_PFCP = 2,           /* 检测类别：人形、人脸、机动车、宠物 */
+    ROCKIVA_DET_MODEL_PFP = 3,            /* 检测类别：人形、人脸、宠物 */
+    ROCKIVA_DET_MODEL_PHS = 4,            /* 检测类别：人形、头肩 */
+    ROCKIVA_DET_MODEL_PHCP = 5,           /* 检测类别：人形、头肩、机动车、宠物 */
+} RockIvaDetModel;
 
 /* 工作模式 */
 typedef enum {
@@ -148,6 +166,16 @@ typedef struct {
     void* memAddr;    /* 内存地址 */
     uint32_t memSize; /* 内存长度 */
 } RockIvaMemInfo;
+
+typedef struct {
+    const char* key;
+    char value[ROCKIVA_PARAM_VALUE_MAX_SIZE];
+} RockIvaParam;
+
+typedef struct {
+    int num;
+    RockIvaParam params[ROCKIVA_PARAM_MAX_NUM];
+} RockIvaParams;
 
 /* 点坐标 */
 typedef struct {
@@ -253,6 +281,17 @@ typedef struct {
     RockIvaImage frames[ROCKIVA_MAX_OBJ_NUM];
 } RockIvaReleaseFrames;
 
+ /* 多媒体操作函数 */
+typedef struct {
+    /**
+     * @brief 将图像编码为JPEG图像
+     * @param inputImg [in] 输入图像
+     * @param outputImg [out] 编码后图像(注意,outputImg.dataAddr需要外部自己申请和释放内存,
+     *                        当内部对该图像内存不再使用将会在抓拍回调函数ROCKIVA_FrameReleaseCallback上报)
+     */
+    int (*ROCKIVA_Yuv2Jpeg)(RockIvaImage *inputImg, RockIvaImage *outputImg, void *userdata);
+ } RockIvaMediaOps;
+
 /* SDK通用配置 */
 typedef struct {
     RockIvaLogLevel logLevel;            /* 日志等级 */
@@ -262,15 +301,20 @@ typedef struct {
     uint32_t coreMask;                   /* 指定使用哪个NPU核跑(仅RK3588平台有效) */
     uint32_t channelId;                  /* 通道号 */
     RockIvaImageInfo imageInfo;          /* 输入图像信息 */
-    RockIvaAreas roiAreas;               /* 有效区域 */
+    RockIvaAreas roiAreas;               /* 有效区域(该配置对所有算法模块有效) */
     RockIvaCameraType cameraType;        /* 摄像头类型 */
-    uint32_t detObjectType;              /* 配置要检测的目标,例如检测人\机动车\非机动车: ROCKIVA_OBJECT_TYPE_PERSON|ROCKIVA_OBJECT_TYPE_VEHICLE|ROCKIVA_OBJECT_TYPE_NON_VEHICLE */
+    RockIvaDetModel detModel;            /* 指定前级目标检测算法模型 */
+    uint32_t detClasses;                 /* 需要的一些特殊检测类别，如婴儿检测：ROCKIVA_OBJECT_TYPE_BITMASK(ROCKIVA_OBJECT_TYPE_BABY) */
+    RockIvaMemInfo detModelData;         /* 指定检测模型数据（用于快启直接配置模型内存数据直接用于加载） */
+    uint8_t trackerVersion;              /* 指定跟踪算法版本 0:默认v2; 1:v1; 2:v2 */
+    RockIvaMediaOps mediaOps;            /* 设置媒体操作 */
 } RockIvaInitParam;
 
 /* 推帧提供的额外信息 */
 typedef struct {
     RockIvaAreas roiAreas;               /* 有效区域（该参数优先级高于RockIvaInitParam.roiArea） */
     RockIvaObjectInfo objInfo;           /* 需要处理的目标信息（可以直接用于识别分析不用再做目标检测） */
+    RockIvaParams moduleParams;          /* 模块自定义参数 */
 } RockIvaFrameExtraInfo;
 
 typedef struct {
@@ -311,8 +355,8 @@ RockIvaRetCode ROCKIVA_Release(RockIvaHandle handle);
 /**
  * @brief 设置帧释放回调
  * 
- * @param handle 
- * @param callback 
+ * @param handle [IN] handle
+ * @param callback [IN] 帧释放回调函数
  * @return RockIvaRetCode 
  */
 RockIvaRetCode ROCKIVA_SetFrameReleaseCallback(RockIvaHandle handle, ROCKIVA_FrameReleaseCallback callback);
@@ -322,6 +366,7 @@ RockIvaRetCode ROCKIVA_SetFrameReleaseCallback(RockIvaHandle handle, ROCKIVA_Fra
  *
  * @param handle [IN] handle
  * @param inputImg [IN] 输入图像帧
+ * @param extraInfo [IN] 额外信息(不需要可设NULL)
  * @return RockIvaRetCode
  */
 RockIvaRetCode ROCKIVA_PushFrame(RockIvaHandle handle, const RockIvaImage* inputImg, const RockIvaFrameExtraInfo* extraInfo);
@@ -331,10 +376,20 @@ RockIvaRetCode ROCKIVA_PushFrame(RockIvaHandle handle, const RockIvaImage* input
  * 
  * @param handle [IN] handle
  * @param inputImg [IN] 输入图像帧
- * @param extraInfo [IN] 额外信息
+ * @param extraInfo [IN] 额外信息(不需要可设NULL)
  * @return RockIvaRetCode 
  */
 RockIvaRetCode ROCKIVA_PushFrame2(RockIvaHandle handle, const RockIvaMultiImage* inputImg, const RockIvaFrameExtraInfo* extraInfo);
+
+/**
+ * @brief 设置参数
+ * 
+ * @param params [in] 要设置的参数对象
+ * @param key [in] 参数键
+ * @param value [in] 参数值
+ * @return RockIvaRetCode 
+ */
+RockIvaRetCode ROCKIVA_SetParam(RockIvaParams* params, const char* key, const char* value);
 
 /**
  * @brief 获取SDK版本号
