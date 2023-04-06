@@ -139,6 +139,7 @@ typedef enum {
     ROCKIVA_DET_MODEL_PFP = 3,            /* 检测类别：人形、人脸、宠物 */
     ROCKIVA_DET_MODEL_PHS = 4,            /* 检测类别：人形、头肩 */
     ROCKIVA_DET_MODEL_PHCP = 5,           /* 检测类别：人形、头肩、机动车、宠物 */
+    ROCKIVA_DET_MODEL_PERSON = 6,         /* 检测类别：人形 */
 } RockIvaDetModel;
 
 /* 工作模式 */
