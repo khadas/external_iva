@@ -172,6 +172,7 @@ typedef struct {
 typedef struct {
     uint16_t minScore;                         /* 最小质量分(默认0不过滤) */
     uint16_t minSize;                          /* 最小人脸大小（万分比[0-10000]，默认0为30像素） */
+    uint16_t minPd;                            /* 最小瞳距（像素值，默认0不限制）*/
     uint16_t minClarity;                       /* 最小清晰度（默认0不过滤） */
     RockIvaAngle maxAngle;                     /* 最大人脸角度（默认0不过滤） */
     uint16_t minEyescore;                      /* 眼睛遮挡阈值，低于该阈值将被当作遮挡过滤，值范围[0,100] */
@@ -239,12 +240,14 @@ typedef struct {
     uint16_t noseScore;         /* 鼻子遮挡分数（值范围[0,100]，值越低表示遮挡越严重） */
     uint16_t mouthScore;        /* 嘴巴遮挡分数（值范围[0,100]，值越低表示遮挡越严重） */
     uint16_t faceScore;         /* 人脸分数（值范围[0,100]）*/
+    uint16_t pd;                /* 人脸瞳距（基于输入图像的像素值） */
 } RockIvaFaceQualityInfo;
 
 /* 单个目标人脸检测基本信息 */
 typedef struct {
     uint32_t objId;                                       /* 目标ID[0,2^32) */
     uint32_t frameId;                                     /* 人脸所在帧序号 */
+    uint32_t detScore;                                    /* 目标检测分数 [1-100] */
     RockIvaRectangle faceRect;                            /* 人脸区域原始位置 */
     RockIvaFaceQualityInfo faceQuality;                   /* 人脸质量信息 */
     RockIvaFaceState faceState;                           /* 人脸状态 */
